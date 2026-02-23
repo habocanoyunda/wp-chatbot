@@ -1,0 +1,34 @@
+[phases.setup]
+nixPkgs = [
+  "nodejs_18",
+  "chromium",
+  "nss",
+  "nspr",
+  "atk",
+  "cups",
+  "dbus",
+  "expat",
+  "libdrm",
+  "libxkbcommon",
+  "mesa",
+  "libxdamage",
+  "libxfixes",
+  "libxrandr",
+  "xorg.libX11",
+  "xorg.libxcb",
+  "xorg.libXcomposite",
+  "xorg.libXcursor",
+  "xorg.libXext",
+  "xorg.libXi",
+  "xorg.libXrender",
+  "xorg.libXtst",
+  "xorg.libXScrnSaver",
+  "pango",
+  "cairo",
+  "alsa-lib",
+  "glib"
+]
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/run/current-system/sw/bin/chromium"
