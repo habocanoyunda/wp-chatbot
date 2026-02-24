@@ -21,7 +21,7 @@ async function createBrowser() {
 
 async function login(page) {
     await page.goto(`${BASE_URL}/Login.aspx`, { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForTimeout(2000);
+    await new Promise(r => setTimeout(r, 2000));
 
     // Tum input alanlarini bul
     const inputs = await page.$$('input[type="text"], input[type="password"]');
@@ -29,10 +29,10 @@ async function login(page) {
 
     await inputs[0].click({ clickCount: 3 });
     await inputs[0].type(process.env.K12_USERNAME || '');
-    await page.waitForTimeout(500);
+    await new Promise(r => setTimeout(r, 500));
     await inputs[1].click({ clickCount: 3 });
     await inputs[1].type(process.env.K12_PASSWORD || '');
-    await page.waitForTimeout(500);
+    await new Promise(r => setTimeout(r, 500));
 
     await Promise.all([
         page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
@@ -53,7 +53,7 @@ async function getOdevler() {
         await login(page);
 
         await page.goto(`${BASE_URL}/SPTS.Web/`, { waitUntil: 'networkidle2', timeout: 30000 });
-        await page.waitForTimeout(3000);
+        await new Promise(r => setTimeout(r, 3000));
 
         // Sayfadaki tum metin icerigini al, odev bolumunu bul
         const odevler = await page.evaluate(() => {
@@ -104,7 +104,7 @@ async function getMesajlar() {
         await login(page);
 
         await page.goto(`${BASE_URL}/SPTS.Web/`, { waitUntil: 'networkidle2', timeout: 30000 });
-        await page.waitForTimeout(3000);
+        await new Promise(r => setTimeout(r, 3000));
 
         // Mesajlar butonuna tikla
         const clicked = await page.evaluate(() => {
@@ -114,7 +114,7 @@ async function getMesajlar() {
             return false;
         });
 
-        if (clicked) await page.waitForTimeout(3000);
+        if (clicked) await new Promise(r => setTimeout(r, 3000));
 
         const mesajlar = await page.evaluate(() => {
             const results = [];
