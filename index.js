@@ -16,6 +16,7 @@ async function refreshK12Cache() {
         console.log('K12 cache guncelleniyor...');
         const odevler = await getOdevler();
         k12Cache.odevler = odevler;
+        console.log('K12 ödevler:', JSON.stringify(odevler));
         k12Cache.guncelleme = Date.now();
         console.log('K12 cache guncellendi.');
     } catch (e) {
