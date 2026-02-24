@@ -23,25 +23,22 @@ async function login(page) {
     await page.goto(`${BASE_URL}/Login.aspx`, { waitUntil: 'networkidle2', timeout: 30000 });
     await new Promise(r => setTimeout(r, 2000));
 
-    // Tum input alanlarini bul
-    const inputs = await page.$$('input[type="text"], input[type="password"]');
-    if (inputs.length < 2) throw new Error('Login formu bulunamadı.');
+    await page.waitForSelector('#username', { timeout: 10000 });
+    await page.click('#username', { clickCount: 3 });
+    await page.type('#username', process.env.K12_USERNAME || '');
 
-    await inputs[0].click({ clickCount: 3 });
-    await inputs[0].type(process.env.K12_USERNAME || '');
-    await new Promise(r => setTimeout(r, 500));
-    await inputs[1].click({ clickCount: 3 });
-    await inputs[1].type(process.env.K12_PASSWORD || '');
-    await new Promise(r => setTimeout(r, 500));
+    await page.click('#password', { clickCount: 3 });
+    await page.type('#password', process.env.K12_PASSWORD || '');
 
     await Promise.all([
         page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
-        page.click('input[type="submit"], button[type="submit"]')
+        page.click('#loginButton')
     ]);
 
     if (page.url().includes('Login.aspx')) {
-        throw new Error('Giriş başarısız.');
+        throw new Error('Giriş başarısız - kullanıcı adı veya şifre hatalı.');
     }
+    console.log('K12 login başarılı, URL:', page.url());
 }
 
 async function getOdevler() {
@@ -53,40 +50,36 @@ async function getOdevler() {
         await login(page);
 
         await page.goto(`${BASE_URL}/SPTS.Web/`, { waitUntil: 'networkidle2', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
 
-        // Sayfadaki tum metin icerigini al, odev bolumunu bul
         const odevler = await page.evaluate(() => {
             const results = [];
 
-            // Odev satirlarini bul - K12Net'in kullandigi yapilar
-            const selectors = [
-                '.odev-list tr', '.homework-list tr',
-                '[class*="odev"] tr', '[id*="odev"] tr',
-                '.panel-body tr', '.list-group-item'
-            ];
-
-            for (const sel of selectors) {
-                const rows = document.querySelectorAll(sel);
+            const containers = document.querySelectorAll('[class*="odev"], [id*="odev"], [class*="Odev"], [id*="Odev"]');
+            containers.forEach(c => {
+                const rows = c.querySelectorAll('tr, .item, li');
                 if (rows.length > 0) {
                     rows.forEach(row => {
                         const text = row.innerText?.trim();
                         if (text && text.length > 10) results.push(text);
                     });
-                    if (results.length > 0) break;
+                } else {
+                    const text = c.innerText?.trim();
+                    if (text && text.length > 20) results.push(text);
                 }
-            }
+            });
 
-            // Hic bulamazsa odev bolumunun ham metnini al
             if (results.length === 0) {
-                const odevDiv = document.querySelector('#divOdevler, #odevler, [class*="odev-container"]');
-                if (odevDiv) results.push(odevDiv.innerText);
+                document.querySelectorAll('table tr').forEach(row => {
+                    const text = row.innerText?.trim();
+                    if (text && text.length > 15) results.push(text);
+                });
             }
 
-            return results;
+            return results.slice(0, 30);
         });
 
-        return odevler.length > 0 ? odevler : ['Ödev bilgisi alınamadı.'];
+        return odevler.length > 0 ? odevler : ['Ödev bilgisi bulunamadı.'];
     } catch (e) {
         console.error('K12 ödev hatası:', e.message);
         return [`Hata: ${e.message}`];
@@ -106,44 +99,24 @@ async function getMesajlar() {
         await page.goto(`${BASE_URL}/SPTS.Web/`, { waitUntil: 'networkidle2', timeout: 30000 });
         await new Promise(r => setTimeout(r, 3000));
 
-        // Mesajlar butonuna tikla
-        const clicked = await page.evaluate(() => {
-            const links = Array.from(document.querySelectorAll('a, button, .menu-item'));
-            const mesajLink = links.find(el => el.innerText?.includes('Mesaj') || el.href?.includes('mesaj'));
-            if (mesajLink) { mesajLink.click(); return true; }
-            return false;
+        await page.evaluate(() => {
+            const links = Array.from(document.querySelectorAll('a, button, div'));
+            const mesaj = links.find(el => el.innerText?.trim() === 'Mesajlar' || el.innerText?.trim() === 'Mesaj');
+            if (mesaj) mesaj.click();
         });
 
-        if (clicked) await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 3000));
 
         const mesajlar = await page.evaluate(() => {
             const results = [];
-            const selectors = [
-                '.mesaj-list tr', '.message-list tr',
-                '[class*="mesaj"] tr', '[id*="mesaj"] tr',
-                '.list-group-item', '.panel-body tr'
-            ];
-
-            for (const sel of selectors) {
-                const rows = document.querySelectorAll(sel);
-                if (rows.length > 0) {
-                    rows.forEach(row => {
-                        const text = row.innerText?.trim();
-                        if (text && text.length > 10) results.push(text);
-                    });
-                    if (results.length > 0) break;
-                }
-            }
-
-            if (results.length === 0) {
-                const mesajDiv = document.querySelector('#divMesajlar, #mesajlar, [class*="mesaj-container"]');
-                if (mesajDiv) results.push(mesajDiv.innerText);
-            }
-
-            return results;
+            document.querySelectorAll('table tr, .list-item, [class*="mesaj"]').forEach(row => {
+                const text = row.innerText?.trim();
+                if (text && text.length > 10) results.push(text);
+            });
+            return results.slice(0, 20);
         });
 
-        return mesajlar.length > 0 ? mesajlar : ['Mesaj bilgisi alınamadı.'];
+        return mesajlar.length > 0 ? mesajlar : ['Mesaj bilgisi bulunamadı.'];
     } catch (e) {
         console.error('K12 mesaj hatası:', e.message);
         return [`Hata: ${e.message}`];
